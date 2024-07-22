@@ -3,22 +3,14 @@ pragma solidity ^0.8.24;
 
 import "./Errors.sol";
 
-import { ReentrancyGuard } from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "./zkcvrfCallbackIface.sol";
-import "./zkcvrfIface.sol";
+import "./ZKVRFConsumerBase.sol";
+import "./ZKVRFCoordinatorInterface.sol";
 
-contract CoinFlip is zkcvrfCallbackIface, ReentrancyGuard, Ownable {
+contract CoinFlip is ZKVRFConsumerBase, ReentrancyGuard, Ownable {
     /* Storage:
      ***********/
-
-    zkcvrfIface _vrf;
-
-    modifier onlyVrfContract() {
-        require(msg.sender == address(_vrf), "Unauthorized access");
-        _;
-    }
-
     uint256 public constant MIN_BET = 0.001 ether;
     uint256 private contractBalance;
 
@@ -55,8 +47,9 @@ contract CoinFlip is zkcvrfCallbackIface, ReentrancyGuard, Ownable {
     /* Constructor:
      **************/
 
-    constructor(address _zkcvrf) Ownable(msg.sender) payable {
-        _vrf = zkcvrfIface(_zkcvrf);
+    ZKVRFCoordinatorInterface _vrf;
+    constructor(address _zkvrfCoordinator) Ownable(msg.sender) ZKVRFConsumerBase(_zkvrfCoordinator) payable {
+        _vrf = ZKVRFCoordinatorInterface(_zkvrfCoordinator);
         if (msg.value < 0.1 ether) revert CoinFlip__ContractNeedsETH();
         contractBalance += msg.value;
     }
@@ -87,8 +80,7 @@ contract CoinFlip is zkcvrfCallbackIface, ReentrancyGuard, Ownable {
         playersByAddress[player] = _player;
         contractBalance += _player.betAmount;
 
-        uint256 requestId = _seed;
-	requestRandomWords(_seed, _grouphash);
+        uint256 requestId = requestRandomWords(_seed, _grouphash);
         temps[requestId].playerAddress = player;
         temps[requestId].id = requestId;
 
@@ -138,12 +130,11 @@ contract CoinFlip is zkcvrfCallbackIface, ReentrancyGuard, Ownable {
     //////////////////////////////////////////////////////////////*/
 
     /// @notice Assumes the subscription is funded sufficiently.
-    function requestRandomWords(uint256 seed, uint256 group_hash) private {
-	    _vrf.create_random(seed, address(this), group_hash);
+    function requestRandomWords(uint256 seed, uint256 group_hash) private returns (uint256) {
+	    _vrf.requestRandomWords(seed, group_hash, address(this));
     }
 
-    //function fulfillRandomWords(uint256 _requestId, uint256[] calldata _randomWords) internal override {
-    function handle_random(uint256 _requestId, uint256 _randomWords) public onlyVrfContract {
+    function fulfillRandomWords(uint256 _requestId, uint256 seed, uint256 _randomWords) internal override {
         uint256 randomResult = _randomWords % 2;
         temps[_requestId].result = randomResult;
 
