@@ -1,8 +1,9 @@
-require("@nomicfoundation/hardhat-ethers");
-require("@nomicfoundation/hardhat-chai-matchers");
-require("@nomicfoundation/hardhat-verify");
-require("solidity-coverage");
+//require("@nomicfoundation/hardhat-ethers");
+//require("@nomicfoundation/hardhat-chai-matchers");
+//require("@nomicfoundation/hardhat-verify");
+//require("solidity-coverage");
 
+require("@nomicfoundation/hardhat-toolbox");
 const dotenv = require("dotenv");
 dotenv.config();
 
@@ -10,7 +11,7 @@ const privateKey = process.env.PRIVATE_KEY ?? "";
 
 module.exports = {
   solidity: {
-    version: "0.8.20",
+    version: "0.8.24",
     settings: {
       optimizer: {
         enabled: true,

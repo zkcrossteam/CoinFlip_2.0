@@ -1,24 +1,23 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.20;
+pragma solidity ^0.8.24;
 
 import "./Errors.sol";
 
-import { VRFConsumerBaseV2Plus } from "@chainlink/contracts/src/v0.8/vrf/dev/VRFConsumerBaseV2Plus.sol";
-import { IVRFCoordinatorV2Plus } from "@chainlink/contracts/src/v0.8/vrf/dev/interfaces/IVRFCoordinatorV2Plus.sol";
-import { VRFV2PlusClient } from "@chainlink/contracts/src/v0.8/vrf/dev/libraries/VRFV2PlusClient.sol";
-import { ReentrancyGuard } from "solady/src/utils/ReentrancyGuard.sol";
+import { ReentrancyGuard } from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
+import "./zkcvrfCallbackIface.sol";
+import "./zkcvrfIface.sol";
 
-contract CoinFlip is VRFConsumerBaseV2Plus, ReentrancyGuard {
+contract CoinFlip is zkcvrfCallbackIface, ReentrancyGuard, Ownable {
     /* Storage:
      ***********/
 
-    // Chainlink VRF parameters
-    IVRFCoordinatorV2Plus internal immutable COORDINATOR;
-    bytes32 internal immutable KEY_HASH;
-    uint256 private immutable SUBSCRIPTION_ID;
-    uint16 private constant REQUEST_CONFIRMATIONS = 3;
-    uint32 private constant CALLBACK_GAS_LIMIT = 1e5;
-    uint32 private constant NUM_WORDS = 1;
+    zkcvrfIface _vrf;
+
+    modifier onlyVrfContract() {
+        require(msg.sender == address(_vrf), "Unauthorized access");
+        _;
+    }
 
     uint256 public constant MIN_BET = 0.001 ether;
     uint256 private contractBalance;
@@ -56,15 +55,9 @@ contract CoinFlip is VRFConsumerBaseV2Plus, ReentrancyGuard {
     /* Constructor:
      **************/
 
-    constructor(
-        address _vrfCoordinator,
-        bytes32 _keyHash,
-        uint256 _subscriptionId
-    ) payable VRFConsumerBaseV2Plus(_vrfCoordinator) {
+    constructor(address _zkcvrf) Ownable(msg.sender) payable {
+        _vrf = zkcvrfIface(_zkcvrf);
         if (msg.value < 0.1 ether) revert CoinFlip__ContractNeedsETH();
-        COORDINATOR = IVRFCoordinatorV2Plus(_vrfCoordinator);
-        KEY_HASH = _keyHash;
-        SUBSCRIPTION_ID = _subscriptionId;
         contractBalance += msg.value;
     }
 
@@ -76,7 +69,7 @@ contract CoinFlip is VRFConsumerBaseV2Plus, ReentrancyGuard {
      * @notice Allows a player to bet on heads or tails
      * @param _betChoice 0 for heads, 1 for tails
      */
-    function bet(uint256 _betChoice) public payable nonReentrant {
+    function bet(uint256 _seed, uint256 _grouphash, uint256 _betChoice) public payable nonReentrant {
         if (msg.value < MIN_BET) revert CoinFlip__InsuffisantAmount();
         if (msg.value > getContractBalance() / 2) revert CoinFlip__AmountTooBig();
         if (_betChoice != 0 && _betChoice != 1) revert CoinFlip__InvalidBetChoice();
@@ -94,7 +87,8 @@ contract CoinFlip is VRFConsumerBaseV2Plus, ReentrancyGuard {
         playersByAddress[player] = _player;
         contractBalance += _player.betAmount;
 
-        uint256 requestId = requestRandomWords();
+        uint256 requestId = _seed;
+	requestRandomWords(_seed, _grouphash);
         temps[requestId].playerAddress = player;
         temps[requestId].id = requestId;
 
@@ -144,22 +138,13 @@ contract CoinFlip is VRFConsumerBaseV2Plus, ReentrancyGuard {
     //////////////////////////////////////////////////////////////*/
 
     /// @notice Assumes the subscription is funded sufficiently.
-    function requestRandomWords() private returns (uint256) {
-        return
-            COORDINATOR.requestRandomWords(
-                VRFV2PlusClient.RandomWordsRequest({
-                    keyHash: KEY_HASH,
-                    subId: SUBSCRIPTION_ID,
-                    requestConfirmations: REQUEST_CONFIRMATIONS,
-                    callbackGasLimit: CALLBACK_GAS_LIMIT,
-                    numWords: NUM_WORDS,
-                    extraArgs: VRFV2PlusClient._argsToBytes(VRFV2PlusClient.ExtraArgsV1({ nativePayment: false }))
-                })
-            );
+    function requestRandomWords(uint256 seed, uint256 group_hash) private {
+	    _vrf.create_random(seed, address(this), group_hash);
     }
 
-    function fulfillRandomWords(uint256 _requestId, uint256[] calldata _randomWords) internal override {
-        uint256 randomResult = _randomWords[0] % 2;
+    //function fulfillRandomWords(uint256 _requestId, uint256[] calldata _randomWords) internal override {
+    function handle_random(uint256 _requestId, uint256 _randomWords) public onlyVrfContract {
+        uint256 randomResult = _randomWords % 2;
         temps[_requestId].result = randomResult;
 
         checkResult(randomResult, _requestId);
