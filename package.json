@@ -29,6 +29,7 @@
     "@metamask/detect-provider": "2.0.0",
     "@web3-react/core": "8.2.3",
     "@web3-react/metamask": "8.2.4",
+    "ethers": "^6.13.1",
     "color": "4.2.3",
     "jazzicon": "1.5.0",
     "prop-types": "15.8.1",

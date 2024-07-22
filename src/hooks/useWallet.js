@@ -20,7 +20,7 @@ const addSepoliaNetwork = async () => {
             symbol: "ETH",
             decimals: 18,
           },
-          rpcUrls: ["https://1rpc.io/sepolia"],
+          rpcUrls: ["https://sepolia.infura.io/v3/4edac59cfffd422caca148cbc1d9a5af"],
           blockExplorerUrls: ["https://sepolia.etherscan.io"],
         },
       ],

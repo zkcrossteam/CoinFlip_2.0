@@ -17,9 +17,11 @@ export const useFunction = (functionName, rawValue, args = []) => {
     const parsedValue = rawValue ? parseEther(`${rawValue}`).toString() : undefined;
 
     try {
+      console.log("1111111111", functionName);
       const estimatedGas = await contract.estimateGas[functionName](...args, {
         value: parsedValue,
       });
+      console.log("222222222", functionName);
 
       const { hash, from, value, wait } = await contract[functionName](...args, {
         value: parsedValue,
