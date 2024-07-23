@@ -2,7 +2,7 @@ const hre = require("hardhat");
 const ethers = hre.ethers;
 const fs = require("fs");
 
-const ZKCVRF="0x50b663A057364C5DfA8b82F0a763A355078bdeB4";
+const ZKCVRF="0x2eE398996503D61fc47a6621cF8aB1c9Bb243f1a";
 
 async function main() {
   const CoinFlip = await ethers.getContractFactory("CoinFlip");
