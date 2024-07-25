@@ -131,7 +131,7 @@ contract CoinFlip is ZKVRFConsumerBase, ReentrancyGuard, Ownable {
 
     /// @notice Assumes the subscription is funded sufficiently.
     function requestRandomWords(uint256 seed, uint256 group_hash) private returns (uint256) {
-	    _vrf.requestRandomWords(seed, group_hash, address(this));
+	    return _vrf.requestRandomWords(seed, group_hash, address(this));
     }
 
     function fulfillRandomWords(uint256 _requestId, uint256 seed, uint256 _randomWords) internal override {
