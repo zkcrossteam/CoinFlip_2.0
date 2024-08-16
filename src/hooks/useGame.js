@@ -8,7 +8,7 @@ export const useGame = () => {
   const [shouldFlip, setShouldFlip] = useState(false);
 
   const arg1 = BigInt(Math.floor(Math.random() * 10000) + 1);
-  const arg2 = BigInt("6632802288658732681706432291368097154356469295689759800133277258786980102956");
+  const arg2 = BigInt("106651045272248281329034530416119353156388698457438994187042521815273962483711");
   const doFlip = useFunction("bet", betAmount, [arg1, arg2, betChoice]);
   const collectFunds = useFunction("withdrawPlayerBalance");
 
